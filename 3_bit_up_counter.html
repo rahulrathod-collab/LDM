@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3-Bit Up Counter — Live Digital Logic Visualization</title>
+<style>
+:root{
+  --bg:#0b1220; --panel:#111c2e; --panel2:#16243a; --text:#e8f0ff;
+  --muted:#9eb0ca; --accent:#42d392; --accent2:#55a7ff; --danger:#ff6b7a;
+  --line:#2a3d59; --on:#55e6a5; --off:#26364e;
+}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(135deg,#08101d,#101b2d 55%,#0b1423);
+font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--text)}
+.container{max-width:1400px;margin:auto;padding:24px}
+header{display:flex;justify-content:space-between;gap:20px;align-items:flex-end;margin-bottom:18px}
+h1{margin:0;font-size:clamp(25px,3vw,42px)}
+.subtitle{color:var(--muted);margin-top:7px}
+.badge{padding:8px 12px;border:1px solid var(--line);border-radius:999px;color:var(--accent);background:#10251f;font-weight:700}
+.grid{display:grid;grid-template-columns:1.35fr .65fr;gap:16px}
+.panel{background:rgba(17,28,46,.94);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 12px 35px rgba(0,0,0,.18)}
+.panel h2{font-size:18px;margin:0 0 14px}
+.controls{display:flex;flex-wrap:wrap;gap:9px;align-items:center}
+button{border:1px solid #355071;background:#172940;color:var(--text);padding:10px 14px;border-radius:9px;font-weight:700;cursor:pointer}
+button:hover{background:#203653}
+button.primary{background:#126d50;border-color:#27a778}
+button.danger{background:#542631;border-color:#8e3e4c}
+.speed{display:flex;align-items:center;gap:9px;margin-left:auto;color:var(--muted)}
+input[type=range]{accent-color:var(--accent);width:170px}
+.status{margin-top:12px;color:var(--muted);font-size:14px}
+.circuit{margin-top:15px;min-height:310px;position:relative;background:#0b1525;border-radius:13px;border:1px solid #1e304a;overflow:hidden}
+.circuit svg{width:100%;height:310px}
+.wire{stroke:#55708f;stroke-width:3;fill:none}
+.livewire{stroke:var(--accent);stroke-width:4;fill:none;filter:drop-shadow(0 0 5px rgba(66,211,146,.5))}
+.block{fill:#162a43;stroke:#5b7697;stroke-width:2}
+.block.active{stroke:var(--accent);filter:drop-shadow(0 0 8px rgba(66,211,146,.4))}
+.svgtext{fill:#dfeaff;font-size:16px;font-weight:700}
+.smallsvg{fill:#9eb0ca;font-size:12px}
+.outputs{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:15px}
+.bit{background:#0b1525;border:1px solid var(--line);border-radius:13px;text-align:center;padding:14px}
+.bit .label{color:var(--muted);font-weight:700}
+.bit .value{font:700 54px/1.05 ui-monospace,SFMono-Regular,Consolas,monospace;margin:7px 0}
+.bit.on{border-color:#2eaa7c}.bit.on .value{color:var(--on);text-shadow:0 0 16px rgba(85,230,165,.35)}
+.bit.off .value{color:#73849e}
+.mainvalue{text-align:center;margin:16px 0 4px}
+.binary{font:800 46px ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:8px;color:#fff}
+.decimal{font-size:17px;color:var(--muted);margin-top:4px}
+.decimal strong{font-size:30px;color:var(--accent)}
+.metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.metric{padding:13px;background:#0d1829;border:1px solid var(--line);border-radius:11px}
+.metric span{display:block;color:var(--muted);font-size:12px;margin-bottom:5px}
+.metric b{font-size:20px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:9px 8px;border-bottom:1px solid #24364f;text-align:center}
+th{color:#9eb0ca;font-weight:700}
+tr.current{background:#123528;outline:1px solid #287b5d}
+.sequence{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+.state{padding:7px 9px;border-radius:7px;background:#172940;border:1px solid #2d4562;font-family:monospace}
+.state.current{background:#126d50;border-color:#3ad39a;color:white}
+.wave{margin-top:8px;width:100%;height:300px;background:#0a1423;border:1px solid var(--line);border-radius:12px}
+.explain{background:#0d1c2b;border-left:4px solid var(--accent);padding:13px 15px;border-radius:9px;line-height:1.55;color:#d8e6f8}
+footer{text-align:center;color:#8fa2bc;padding:24px 0 5px;font-weight:700}
+.note{font-size:13px;color:#8fa2bc;margin-top:9px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}.speed{margin-left:0}.circuit{overflow-x:auto}.metrics{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+  <div>
+    <h1>3-Bit Binary UP Counter</h1>
+    <div class="subtitle">Interactive asynchronous (ripple) counter — live digital logic visualization</div>
+  </div>
+  <div class="badge" id="runBadge">● PAUSED</div>
+</header>
+
+<div class="grid">
+<section class="panel">
+  <h2>Counter Circuit</h2>
+  <div class="controls">
+    <button class="primary" id="startBtn">▶ Start</button>
+    <button id="pauseBtn">⏸ Pause</button>
+    <button id="stepBtn">⏭ Single Step</button>
+    <button class="danger" id="resetBtn">🔄 Reset</button>
+    <div class="speed">Clock speed <input id="speed" type="range" min="100" max="1500" value="650" step="50"><b id="speedLabel">650 ms</b></div>
+  </div>
+  <div class="status">Clock pulse: <b id="pulse">0</b> · Edge model: falling-edge ripple · T = 1 (JK equivalent: J = K = 1)</div>
+
+  <div class="circuit">
+  <svg viewBox="0 0 1000 310" aria-label="Three flip-flop ripple counter">
+    <text x="42" y="36" class="svgtext">CLOCK</text>
+    <line x1="110" y1="30" x2="145" y2="30" class="wire"/>
+    <polyline points="145,30 145,95 210,95" class="livewire" id="clockWire"/>
+    <text x="145" y="117" class="smallsvg">external clock</text>
+
+    <rect x="210" y="55" width="190" height="100" rx="12" class="block" id="ff0"/>
+    <text x="305" y="82" text-anchor="middle" class="svgtext">FF0 — T FLIP-FLOP</text>
+    <text x="305" y="106" text-anchor="middle" class="smallsvg">T = 1</text>
+    <text x="305" y="132" text-anchor="middle" class="svgtext">Q0 = <tspan id="svgq0">0</tspan></text>
+
+    <line x1="400" y1="105" x2="470" y2="105" class="livewire"/>
+    <text x="435" y="94" text-anchor="middle" class="smallsvg">Q0 → CLK</text>
+
+    <rect x="470" y="55" width="190" height="100" rx="12" class="block" id="ff1"/>
+    <text x="565" y="82" text-anchor="middle" class="svgtext">FF1 — T FLIP-FLOP</text>
+    <text x="565" y="106" text-anchor="middle" class="smallsvg">T = 1</text>
+    <text x="565" y="132" text-anchor="middle" class="svgtext">Q1 = <tspan id="svgq1">0</tspan></text>
+
+    <line x1="660" y1="105" x2="730" y2="105" class="livewire"/>
+    <text x="695" y="94" text-anchor="middle" class="smallsvg">Q1 → CLK</text>
+
+    <rect x="730" y="55" width="190" height="100" rx="12" class="block" id="ff2"/>
+    <text x="825" y="82" text-anchor="middle" class="svgtext">FF2 — T FLIP-FLOP</text>
+    <text x="825" y="106" text-anchor="middle" class="smallsvg">T = 1</text>
+    <text x="825" y="132" text-anchor="middle" class="svgtext">Q2 = <tspan id="svgq2">0</tspan></text>
+
+    <line x1="305" y1="155" x2="305" y2="230" class="wire"/>
+    <line x1="565" y1="155" x2="565" y2="230" class="wire"/>
+    <line x1="825" y1="155" x2="825" y2="230" class="wire"/>
+    <text x="305" y="254" text-anchor="middle" class="smallsvg">LSB</text>
+    <text x="565" y="254" text-anchor="middle" class="smallsvg">middle bit</text>
+    <text x="825" y="254" text-anchor="middle" class="smallsvg">MSB</text>
+    <circle cx="305" cy="230" r="18" id="led0" fill="#26364e"/>
+    <circle cx="565" cy="230" r="18" id="led1" fill="#26364e"/>
+    <circle cx="825" cy="230" r="18" id="led2" fill="#26364e"/>
+  </svg>
+  </div>
+
+  <div class="outputs">
+    <div class="bit off" id="bit2"><div class="label">Q2 — MSB</div><div class="value" id="q2">0</div><div class="label">2² = 4</div></div>
+    <div class="bit off" id="bit1"><div class="label">Q1</div><div class="value" id="q1">0</div><div class="label">2¹ = 2</div></div>
+    <div class="bit off" id="bit0"><div class="label">Q0 — LSB</div><div class="value" id="q0">0</div><div class="label">2⁰ = 1</div></div>
+  </div>
+
+  <div class="mainvalue">
+    <div class="binary">000</div>
+    <div class="decimal">Decimal value: <strong id="decimal">0</strong></div>
+  </div>
+</section>
+
+<aside class="panel">
+  <h2>Counter Parameters</h2>
+  <div class="metrics">
+    <div class="metric"><span>Number of flip-flops</span><b>3</b></div>
+    <div class="metric"><span>Maximum states</span><b>2³ = 8</b></div>
+    <div class="metric"><span>Counting range</span><b>0 to 7</b></div>
+    <div class="metric"><span>Modulus</span><b>8</b></div>
+    <div class="metric"><span>Counter type</span><b>Binary UP</b></div>
+    <div class="metric"><span>Architecture</span><b>Asynchronous</b></div>
+  </div>
+
+  <h2 style="margin-top:20px">Live State Sequence</h2>
+  <div class="sequence" id="sequence"></div>
+
+  <h2 style="margin-top:20px">Educational Explanation</h2>
+  <div class="explain" id="explain">Press <b>Start</b> or <b>Single Step</b> to begin. The first flip-flop toggles from the external clock, while the following stages receive their clock from the preceding Q output.</div>
+  <div class="note">For an asynchronous ripple counter, propagation delay is real: state changes ripple from Q0 to Q1 to Q2 rather than occurring simultaneously.</div>
+</aside>
+</div>
+
+<section class="panel" style="margin-top:16px">
+  <h2>Live Timing Diagram</h2>
+  <canvas class="wave" id="wave"></canvas>
+  <div class="note">The waveform history shows CLOCK, Q0, Q1 and Q2. Each clock event appends one synchronized sample to the trace.</div>
+</section>
+
+<section class="panel" style="margin-top:16px">
+  <h2>Live Truth / State Table</h2>
+  <table>
+    <thead><tr><th>Clock Pulse</th><th>Present State</th><th>Next State</th><th>Decimal</th></tr></thead>
+    <tbody id="stateTable"></tbody>
+  </table>
+</section>
+
+<footer>3-Bit Up Counter – Live Digital Logic Visualization</footer>
+</div>
+
+<script>
+const state = { value:0, pulse:0, running:false, history:[] };
+let timer = null;
+
+const $ = id => document.getElementById(id);
+
+function bits(v){ return [(v>>2)&1,(v>>1)&1,v&1]; }
+
+function explanation(prev,next){
+  const a=bits(prev), b=bits(next);
+  const changed=[];
+  if(a[2]!==b[2]) changed.push("Q2");
+  if(a[1]!==b[1]) changed.push("Q1");
+  if(a[0]!==b[0]) changed.push("Q0");
+  const p=prev.toString(2).padStart(3,"0"), n=next.toString(2).padStart(3,"0");
+  if(prev===7) return `<b>${p} → ${n}</b>: all three outputs wrap around to 0, completing the MOD-8 count.`;
+  if(prev===0) return `<b>${p} → ${n}</b>: Q0 toggles from 0 to 1.`;
+  if(prev===1) return `<b>${p} → ${n}</b>: Q0 toggles 1→0 and the ripple clocks Q1, so Q1 toggles to 1.`;
+  if(prev===3) return `<b>${p} → ${n}</b>: Q0 and Q1 return to 0 and the ripple clocks Q2, which toggles to 1.`;
+  return `<b>${p} → ${n}</b>: ${changed.join(" and ")} ${changed.length>1?"toggle":"toggles"} according to the ripple sequence.`;
+}
+
+function render(){
+  const b=bits(state.value);
+  ["q2","q1","q0"].forEach((id,i)=>$(id).textContent=b[i]);
+  ["svgq2","svgq1","svgq0"].forEach((id,i)=>$(id).textContent=b[i]);
+  $("decimal").textContent=state.value;
+  $("pulse").textContent=state.pulse;
+  $("runBadge").textContent=state.running ? "● RUNNING" : "● PAUSED";
+  $("runBadge").style.color=state.running ? "var(--accent)" : "var(--muted)";
+  for(let i=0;i<3;i++){
+    const el=$("bit"+(2-i));
+    el.className="bit "+(b[i]?"on":"off");
+    $("led"+(2-i)).setAttribute("fill",b[i]?"#55e6a5":"#26364e");
+    $("ff"+(2-i)).classList.toggle("active",!!b[i]);
+  }
+  document.querySelector(".binary").textContent=b.join("");
+  $("explain").innerHTML=state.history.length ? state.history[state.history.length-1].explanation :
+    'Press <b>Start</b> or <b>Single Step</b> to begin. The first flip-flop toggles from the external clock, while the following stages receive their clock from the preceding Q output.';
+  renderSequence();
+  renderTable();
+  drawWave();
+}
+
+function step(){
+  const prev=state.value;
+  const next=(prev+1)%8;
+  state.value=next; state.pulse++;
+  state.history.push({pulse:state.pulse, prev, next, explanation:explanation(prev,next)});
+  if(state.history.length>32) state.history.shift();
+  render();
+}
+
+function reset(){
+  state.value=0; state.pulse=0; state.history=[];
+  render();
+}
+
+function renderSequence(){
+  const seq=$("sequence"); seq.innerHTML="";
+  for(let v=0;v<8;v++){
+    const d=document.createElement("span");
+    d.className="state"+(v===state.value?" current":"");
+    d.textContent=v.toString(2).padStart(3,"0");
+    seq.appendChild(d);
+  }
+}
+
+function renderTable(){
+  const body=$("stateTable"); body.innerHTML="";
+  for(let i=0;i<8;i++){
+    const tr=document.createElement("tr");
+    if(i===state.value) tr.className="current";
+    const next=(i+1)%8;
+    tr.innerHTML=`<td>${i}</td><td>${i.toString(2).padStart(3,"0")}</td><td>${next.toString(2).padStart(3,"0")}</td><td>${i}</td>`;
+    body.appendChild(tr);
+  }
+}
+
+function resizeCanvas(){
+  const c=$("wave"), r=c.getBoundingClientRect(), d=devicePixelRatio||1;
+  c.width=r.width*d; c.height=r.height*d;
+  const ctx=c.getContext("2d"); ctx.scale(d,d); drawWave();
+}
+function drawWave(){
+  const c=$("wave"); if(!c) return;
+  const w=c.clientWidth,h=c.clientHeight,ctx=c.getContext("2d");
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle="#0a1423";ctx.fillRect(0,0,w,h);
+  const labels=["CLK","Q0","Q1","Q2"], ys=[45,105,165,225], amp=18;
+  ctx.font="bold 13px Segoe UI";ctx.textBaseline="middle";
+  labels.forEach((lab,i)=>{ctx.fillStyle="#9eb0ca";ctx.fillText(lab,12,ys[i]);ctx.strokeStyle="#21334b";ctx.beginPath();ctx.moveTo(50,ys[i]);ctx.lineTo(w-10,ys[i]);ctx.stroke();});
+  const n=Math.max(2,state.history.length+1), x0=62, x1=w-18, dx=Math.max(22,(x1-x0)/(n-1));
+  const samples=[{pulse:0,value:0}].concat(state.history.map(h=>({pulse:h.pulse,value:h.next})));
+  function signal(row,get){
+    ctx.strokeStyle="#55e6a5";ctx.lineWidth=2.5;ctx.beginPath();
+    samples.forEach((s,i)=>{
+      const x=x0+i*dx, val=get(s), y=ys[row]+(val?-amp:amp);
+      if(i===0)ctx.moveTo(x,y); else {const px=x-dx; const py=ys[row]+(get(samples[i-1])?-amp:amp);ctx.lineTo(x,py);ctx.lineTo(x,y);}
+    });ctx.stroke();
+  }
+  signal(0,s=>s.pulse%2); signal(1,s=>s.value&1); signal(2,s=>(s.value>>1)&1); signal(3,s=>(s.value>>2)&1);
+  ctx.fillStyle="#73849e";ctx.font="12px Segoe UI";
+  samples.forEach((s,i)=>{if(i%Math.max(1,Math.ceil(samples.length/12))===0)ctx.fillText(String(s.pulse),x0+i*dx-3,h-18);});
+}
+
+$("startBtn").onclick=()=>{
+  if(state.running)return;
+  state.running=true; render();
+  timer=setInterval(step,Number($("speed").value));
+};
+$("pauseBtn").onclick=()=>{
+  state.running=false; clearInterval(timer); timer=null; render();
+};
+$("stepBtn").onclick=()=>{ if(!state.running) step(); };
+$("resetBtn").onclick=()=>{state.running=false;clearInterval(timer);timer=null;reset();};
+$("speed").oninput=()=>{
+  $("speedLabel").textContent=$("speed").value+" ms";
+  if(state.running){clearInterval(timer);timer=setInterval(step,Number($("speed").value));}
+};
+window.addEventListener("resize",resizeCanvas);
+$("speedLabel").textContent=$("speed").value+" ms";
+render(); resizeCanvas();
+</script>
+</body>
+</html>
