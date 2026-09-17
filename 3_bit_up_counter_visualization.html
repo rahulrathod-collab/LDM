@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3-Bit Up Counter – Live Digital Logic Visualization</title>
+<style>
+:root{--bg:#08111f;--panel:#0f1d31;--panel2:#13243b;--text:#e8f0fb;--muted:#9db0c9;--line:#2b4261;--accent:#55d6ff;--on:#42e6a4;--warn:#ffd166}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:radial-gradient(circle at 15% 0%,#17304e 0,#08111f 38%,#050b14 100%);color:var(--text)}
+header{padding:26px 5vw 18px;border-bottom:1px solid #20344f;background:rgba(5,12,23,.65);backdrop-filter:blur(8px)}
+h1{margin:0;font-size:clamp(25px,4vw,42px)}header p{margin:7px 0 0;color:var(--muted)}
+main{max-width:1400px;margin:auto;padding:22px 4vw 40px}.grid{display:grid;grid-template-columns:1.45fr .85fr;gap:18px}.panel{background:linear-gradient(145deg,rgba(19,36,59,.96),rgba(10,23,39,.96));border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 15px 45px rgba(0,0,0,.22)}
+.panel h2{font-size:17px;margin:0 0 15px}.controls{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+button{border:1px solid #365272;background:#172b45;color:var(--text);padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:700}button:hover{border-color:var(--accent);transform:translateY(-1px)}button.primary{background:#123e55;border-color:#238eaf}
+.speed{margin-left:auto;display:flex;gap:8px;align-items:center;color:var(--muted)}input[type=range]{accent-color:var(--accent);width:150px}
+.counter{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:17px}.bit{padding:16px;text-align:center;background:#091525;border:1px solid #29425f;border-radius:14px}.bit small{display:block;color:var(--muted);font-weight:700;margin-bottom:7px}.digit{font:800 48px/1 ui-monospace,Consolas,monospace;color:#5b6d82}.digit.on{color:var(--on);text-shadow:0 0 22px rgba(66,230,164,.4)}
+.readout{display:flex;gap:30px;align-items:center;justify-content:center;margin:17px 0 3px}.readout .big{font:800 34px ui-monospace,monospace}.readout span{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:1px}
+.diagram{height:310px;position:relative;overflow:auto}.stage{min-width:760px;height:270px;position:relative}.ff{position:absolute;width:145px;height:112px;border:2px solid #486584;border-radius:14px;background:#0b192a;display:flex;flex-direction:column;justify-content:center;align-items:center}.ff strong{font-size:18px}.ff small{color:var(--muted);margin-top:4px}.q{margin-top:7px;font:700 14px ui-monospace,monospace}.ff0{left:6%;top:72px}.ff1{left:40%;top:72px}.ff2{left:74%;top:72px}.wire{position:absolute;height:3px;background:#4a7298;transform-origin:left center}.w1{left:23%;top:127px;width:17%}.w2{left:57%;top:127px;width:17%}.clk{position:absolute;left:1%;top:18px;color:var(--accent);font-weight:800}.clkline{left:9%;top:28px;width:76%;border-top:2px dashed #345878}.arrow{position:absolute;color:var(--warn);font-size:20px}.a1{left:35%;top:111px}.a2{left:69%;top:111px}.tbadge{position:absolute;top:43px;background:#173652;color:#9edfff;padding:4px 8px;border-radius:7px;font:700 11px ui-monospace}.t0{left:9%}.t1{left:43%}.t2{left:77%}
+.wave{overflow:auto}.wave canvas{display:block;width:100%;min-width:820px;height:260px;background:#07111d;border:1px solid #263d58;border-radius:12px}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px 8px;border-bottom:1px solid #253b56;text-align:center}th{color:#9db0c9;font-size:11px;text-transform:uppercase}tr.active{background:rgba(66,230,164,.12);color:var(--on);font-weight:800}
+.explain{min-height:75px;padding:14px;border-radius:12px;background:#091525;border:1px solid #29425f;line-height:1.55;color:#dce8f6}.statepath{font:700 18px ui-monospace,monospace;letter-spacing:1px;word-break:break-word}
+.specs{display:grid;grid-template-columns:1fr 1fr;gap:9px}.spec{padding:11px;background:#0a1728;border:1px solid #263f5d;border-radius:10px}.spec b{display:block;color:var(--muted);font-size:11px;text-transform:uppercase}.spec span{font-weight:800}
+.footer{text-align:center;margin-top:22px;color:#89a0ba;font-weight:700}
+@media(max-width:900px){.grid{grid-template-columns:1fr}.speed{margin-left:0}.diagram{height:285px}.readout{gap:18px}.readout .big{font-size:27px}}
+</style>
+</head>
+<body>
+<header><h1>3-Bit Binary UP Counter</h1><p>Interactive asynchronous (ripple) counter visualization • T flip-flops with T = 1</p></header>
+<main>
+<div class="grid">
+<section class="panel">
+<h2>Live Counter</h2>
+<div class="controls">
+<button class="primary" id="start">▶ Start</button><button id="pause">⏸ Pause</button><button id="step">⏭ Single Step</button><button id="reset">🔄 Reset</button>
+<label class="speed">Clock speed <input id="speed" type="range" min="100" max="1600" value="650" step="50"><b id="speedVal">650 ms</b></label>
+</div>
+<div class="counter"><div class="bit"><small>Q2 — MSB</small><div id="q2" class="digit">0</div></div><div class="bit"><small>Q1</small><div id="q1" class="digit">0</div></div><div class="bit"><small>Q0 — LSB</small><div id="q0" class="digit">0</div></div></div>
+<div class="readout"><div><span>Binary</span><div id="binary" class="big">000</div></div><div><span>Decimal</span><div id="decimal" class="big">0</div></div><div><span>Clock pulse</span><div id="pulse" class="big">0</div></div></div>
+<div class="statepath" id="path">000 → 001 → 010 → 011 → 100 → 101 → 110 → 111 → 000</div>
+</section>
+
+<section class="panel">
+<h2>Counter Specifications</h2>
+<div class="specs">
+<div class="spec"><b>Flip-flops</b><span>3</span></div><div class="spec"><b>Maximum states</b><span>2³ = 8</span></div>
+<div class="spec"><b>Counting range</b><span>0 to 7</span></div><div class="spec"><b>Modulus</b><span>8</span></div>
+<div class="spec"><b>Counter type</b><span>Binary UP</span></div><div class="spec"><b>Architecture</b><span>Asynchronous / Ripple</span></div>
+</div>
+<h2 style="margin-top:20px">Live Explanation</h2><div class="explain" id="explain">Press <b>Start</b> or <b>Single Step</b>. Q0 is the LSB and toggles first; ripple transitions then propagate toward Q2.</div>
+</section>
+</div>
+
+<section class="panel" style="margin-top:18px">
+<h2>3-Stage Ripple Counter Circuit</h2>
+<div class="diagram"><div class="stage">
+<div class="clk">CLOCK</div><div class="clkline"></div>
+<div class="tbadge t0">T = 1</div><div class="tbadge t1">T = 1</div><div class="tbadge t2">T = 1</div>
+<div class="ff ff0"><strong>FF0</strong><small>T Flip-Flop</small><div class="q">Q0 = <span id="d0">0</span></div></div>
+<div class="ff ff1"><strong>FF1</strong><small>T Flip-Flop</small><div class="q">Q1 = <span id="d1">0</span></div></div>
+<div class="ff ff2"><strong>FF2</strong><small>T Flip-Flop</small><div class="q">Q2 = <span id="d2">0</span></div></div>
+<div class="wire w1"></div><div class="wire w2"></div><div class="arrow a1">▶</div><div class="arrow a2">▶</div>
+</div></div>
+</section>
+
+<section class="panel" style="margin-top:18px">
+<h2>Live Timing Diagram</h2><div class="wave"><canvas id="wave"></canvas></div>
+</section>
+
+<section class="panel" style="margin-top:18px">
+<h2>State / Truth Table</h2>
+<div style="overflow:auto"><table><thead><tr><th>Clock pulse</th><th>Present state</th><th>Next state</th><th>Q2</th><th>Q1</th><th>Q0</th><th>Decimal</th></tr></thead><tbody id="tbody"></tbody></table></div>
+</section>
+<div class="footer">3-Bit Up Counter – Live Digital Logic Visualization</div>
+</main>
+
+<script>
+const qEls=[document.getElementById('q2'),document.getElementById('q1'),document.getElementById('q0')];
+const dEls=[document.getElementById('d2'),document.getElementById('d1'),document.getElementById('d0')];
+const canvas=document.getElementById('wave'), ctx=canvas.getContext('2d');
+let value=0,pulse=0,running=false,timer=null,history=[{pulse:0,value:0}],lastValue=0;
+
+function bits(v){return [(v>>2)&1,(v>>1)&1,v&1]}
+function updateUI(prev=value){
+ const b=bits(value); qEls.forEach((e,i)=>{e.textContent=b[i];e.classList.toggle('on',!!b[i])}); dEls.forEach((e,i)=>e.textContent=b[i]);
+ document.getElementById('binary').textContent=b.join('');document.getElementById('decimal').textContent=value;document.getElementById('pulse').textContent=pulse;
+ let changes=[]; const pb=bits(prev);
+ if(b[2]!==pb[2]) changes.push('Q2 toggles'); if(b[1]!==pb[1]) changes.push('Q1 toggles'); if(b[0]!==pb[0]) changes.push('Q0 toggles');
+ if(pulse===0) document.getElementById('explain').innerHTML='Counter reset to <b>000</b>. Press <b>Start</b> or <b>Single Step</b> to apply clock pulses.';
+ else document.getElementById('explain').innerHTML='<b>'+pb.join('')+' → '+b.join('')+'</b>: '+changes.join(', ')+'. The ripple transition produces the next binary count.';
+ drawWave(); renderTable();
+}
+function tick(){let prev=value;value=(value+1)%8;pulse++;history.push({pulse,value});if(history.length>25)history.shift();updateUI(prev)}
+function start(){if(running)return;running=true;timer=setInterval(tick,Number(document.getElementById('speed').value))}
+function pause(){running=false;clearInterval(timer);timer=null}
+function reset(){pause();value=0;pulse=0;history=[{pulse:0,value:0}];updateUI(0)}
+document.getElementById('start').onclick=start;document.getElementById('pause').onclick=pause;document.getElementById('step').onclick=()=>{if(!running)tick()};document.getElementById('reset').onclick=reset;
+document.getElementById('speed').oninput=e=>{document.getElementById('speedVal').textContent=e.target.value+' ms';if(running){pause();start()}};
+
+function renderTable(){let tb=document.getElementById('tbody');let rows='';history.slice().reverse().forEach((h,idx)=>{let next=(h.value+1)%8;let b=bits(h.value);rows+=`<tr class="${idx===0?'active':''}"><td>${h.pulse}</td><td>${b.join('')}</td><td>${bits(next).join('')}</td><td>${b[0]}</td><td>${b[1]}</td><td>${b[2]}</td><td>${h.value}</td></tr>`});tb.innerHTML=rows}
+
+function drawWave(){
+ const dpr=devicePixelRatio||1,w=Math.max(820,canvas.parentElement.clientWidth),h=260;canvas.width=w*dpr;canvas.height=h*dpr;canvas.style.width=w+'px';canvas.style.height=h+'px';ctx.setTransform(dpr,0,0,dpr,0,0);
+ ctx.clearRect(0,0,w,h);ctx.font='12px ui-monospace,monospace';
+ const left=70,top=22,rowH=52, usable=w-left-15, samples=Math.max(12,history.length), step=usable/(samples-1);
+ ctx.strokeStyle='#20364f';ctx.lineWidth=1;
+ for(let r=0;r<4;r++){let y=top+r*rowH+25;ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(w-10,y);ctx.stroke()}
+ ['CLK','Q0','Q1','Q2'].forEach((n,i)=>{ctx.fillStyle='#9db0c9';ctx.fillText(n,16,top+i*rowH+29)});
+ // Build a visual timing trace from recorded states. Clock alternates every sample.
+ const traces=[[],[],[]];
+ history.forEach((h,i)=>{let b=bits(h.value);traces[0].push(b[2]);traces[1].push(b[1]);traces[2].push(b[0])});
+ drawTrace(y=>y, i=>i%2, top, '#55d6ff');
+ traces.forEach((arr,k)=>drawTrace(y=>y,k?arr:arr,top+(k+1)*rowH, k===0?'#42e6a4':k===1?'#ffd166':'#c79cff'));
+ function drawTrace(fn,arr,y0,stroke){ctx.strokeStyle=stroke;ctx.lineWidth=2.5;ctx.beginPath();for(let i=0;i<samples;i++){let x=left+i*step;let bit=fn(y0,arr[i]);let y=y0+bit*18+8;if(i===0)ctx.moveTo(x,y);else{let px=left+(i-1)*step, prev=fn(y0,arr[i-1]);ctx.lineTo(x,y0+prev*18+8);ctx.lineTo(x,y)}}ctx.stroke()}
+}
+window.addEventListener('resize',drawWave);updateUI(0);
+</script>
+</body>
+</html>
